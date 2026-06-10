@@ -10,6 +10,17 @@
 (function () {
   'use strict';
 
+  // 注入收合泡泡的 hover / 注意力 pulse 動畫
+  var awStyle = document.createElement('style');
+  awStyle.textContent =
+    '#avatar-widget-root .aw-bubble{transition:transform .15s, box-shadow .15s;}'
+    + '#avatar-widget-root .aw-bubble:hover{transform:scale(1.07);}'
+    + '#avatar-widget-root .aw-bubble:active{transform:scale(.95);}'
+    + '#avatar-widget-root .aw-bubble:focus-visible{outline:3px solid rgba(47,93,84,.45);outline-offset:3px;}'
+    + '#avatar-widget-root .aw-bubble::after{content:"";position:absolute;inset:0;border-radius:50%;animation:awpulse 2.2s ease-out infinite;pointer-events:none;}'
+    + '@keyframes awpulse{0%{box-shadow:0 0 0 0 rgba(47,93,84,.5);}70%{box-shadow:0 0 0 13px rgba(47,93,84,0);}100%{box-shadow:0 0 0 0 rgba(47,93,84,0);}}';
+  (document.head || document.documentElement).appendChild(awStyle);
+
   // 1) 找出自己的位置，推算 widget.html 的網址（可用 data-widget 覆蓋）
   var me = document.currentScript || (function () {
     var ss = document.getElementsByTagName('script');
@@ -53,12 +64,14 @@
   // 4) 收合後的小泡泡（iframe 收起時顯示，點它再展開）
   var bubble = document.createElement('button');
   bubble.type = 'button';
+  bubble.className = 'aw-bubble';
   bubble.setAttribute('aria-label', '開啟 AI 虛擬人助理');
   bubble.textContent = '💬';
   bubble.style.cssText = [
-    'position:absolute', 'right:0', 'bottom:0', 'width:60px', 'height:60px',
-    'border:0', 'border-radius:50%', 'cursor:pointer', 'font-size:26px',
-    'background:#2f5d54', 'color:#fff', 'box-shadow:0 6px 18px rgba(0,0,0,.25)',
+    'position:absolute', 'right:2px', 'bottom:2px', 'width:64px', 'height:64px',
+    'border:0', 'border-radius:50%', 'cursor:pointer', 'font-size:28px',
+    'background:linear-gradient(135deg,#3f7a6c,#2f5d54)', 'color:#fff',
+    'box-shadow:0 8px 22px rgba(0,0,0,.3)',
     'display:none', 'align-items:center', 'justify-content:center'
   ].join(';');
 

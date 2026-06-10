@@ -5,48 +5,74 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>AI Bot Widget</title>
 <style>
-  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
-               font-family: "Noto Sans TC", system-ui, sans-serif; }
-  #stage { position: absolute; inset: 0; }
-  #avatar-canvas { width: 100%; height: 100%; display: block; }
+  :root{
+    --brand:#2f5d54; --brand-2:#3f7a6c; --ink:#1f2d2a;
+    --surface:rgba(255,255,255,.97); --dock:rgba(26,44,40,.55);
+  }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden;
+               font-family:"Noto Sans TC", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  #stage { position:absolute; inset:0; }
+  #avatar-canvas { width:100%; height:100%; display:block; }
 
-  #control-bar { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; max-width: 90%; }
+  /* ===== 底部控制 dock（毛玻璃）===== */
+  #control-bar {
+    position:absolute; left:50%; bottom:10px; transform:translateX(-50%);
+    display:flex; gap:5px; align-items:center; padding:6px; border-radius:18px;
+    background:var(--dock); backdrop-filter:blur(10px) saturate(1.3); -webkit-backdrop-filter:blur(10px) saturate(1.3);
+    box-shadow:0 8px 24px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.12);
+  }
   .ctrl {
-    background: rgba(47,93,84,.92); color: #fff; border: none; border-radius: 7px;
-    font-size: 13px; padding: 6px 9px; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 4px; backdrop-filter: blur(2px);
+    appearance:none; border:none; cursor:pointer; color:#fff; background:rgba(255,255,255,.14);
+    height:36px; min-width:36px; padding:0 9px; border-radius:12px; flex-shrink:0; white-space:nowrap;
+    display:inline-flex; align-items:center; justify-content:center; gap:5px;
+    font-size:13.5px; font-weight:600; line-height:1;
+    transition:transform .12s, background .15s, filter .15s;
   }
-  .ctrl:hover { background: #3a7166; }
-  .ctrl.listening { background: #c0392b; animation: pulse 1s infinite; }
-  .ctrl.llm-on { background: #6c5ce7; }
-  @keyframes pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(192,57,43,.5);} 50%{ box-shadow:0 0 0 6px rgba(192,57,43,0);} }
+  .ctrl:hover { background:rgba(255,255,255,.26); }
+  .ctrl:active { transform:scale(.93); }
+  .ctrl:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  .ctrl.primary { background:linear-gradient(135deg,var(--brand-2),var(--brand)); padding:0 13px; box-shadow:0 3px 10px rgba(0,0,0,.25); }
+  .ctrl.primary:hover { filter:brightness(1.1); background:linear-gradient(135deg,var(--brand-2),var(--brand)); }
+  .ctrl.listening { background:linear-gradient(135deg,#e74c3c,#c0392b)!important; animation:pulse 1.1s infinite; }
+  .ctrl.llm-on { background:linear-gradient(135deg,#8a7bf0,#6c5ce7); }
+  @keyframes pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(231,76,60,.55);} 50%{ box-shadow:0 0 0 7px rgba(231,76,60,0);} }
 
+  /* ===== 對話泡泡（帶尾巴）===== */
   #bubble {
-    position: absolute; right: 12px; top: 12px; left: 12px;
-    background: #fff; color: #243; border-radius: 12px; padding: 10px 12px;
-    font-size: 14px; line-height: 1.5; box-shadow: 0 6px 20px rgba(0,0,0,.15);
-    opacity: 0; transform: translateY(-6px); transition: .25s; pointer-events: none;
+    position:absolute; right:14px; top:14px; left:14px;
+    background:var(--surface); color:var(--ink); border-radius:16px; padding:11px 14px;
+    font-size:14px; line-height:1.55;
+    box-shadow:0 10px 30px rgba(0,0,0,.18), inset 0 0 0 1px rgba(47,93,84,.08);
+    opacity:0; transform:translateY(-8px) scale(.98); transform-origin:top center;
+    transition:opacity .22s, transform .22s; pointer-events:none;
   }
-  #bubble.show { opacity: 1; transform: none; }
+  #bubble::after { content:""; position:absolute; right:38px; bottom:-7px; width:14px; height:14px;
+    background:var(--surface); transform:rotate(45deg); }
+  #bubble.show { opacity:1; transform:none; }
 
-  #direct-warn {
-    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-    background: #f4f6f8; color: #556; font-size: 15px; text-align: center; padding: 24px;
-  }
-  /* 範例提示清單：告訴使用者可以說什麼 */
+  /* ===== 範例提示清單 ===== */
   #suggestions {
-    position: absolute; left: 8px; right: 8px; bottom: 44px;
-    display: flex; flex-wrap: wrap; gap: 6px; pointer-events: auto;
+    position:absolute; left:10px; right:10px; bottom:58px;
+    display:flex; flex-wrap:wrap; gap:6px; justify-content:center; pointer-events:auto;
   }
   #suggestions .sg-label {
-    width: 100%; font-size: 11px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); margin-bottom: 1px;
+    width:100%; text-align:center; font-size:11px; font-weight:600; color:#fff; letter-spacing:.3px;
+    text-shadow:0 1px 4px rgba(0,0,0,.55); margin-bottom:2px;
   }
   .sugg {
-    background: rgba(255,255,255,.94); color: #2f5d54; border: 1px solid rgba(47,93,84,.25);
-    border-radius: 14px; font-size: 12px; padding: 5px 10px; cursor: pointer; white-space: nowrap;
-    box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    appearance:none; cursor:pointer; white-space:nowrap;
+    background:rgba(255,255,255,.92); color:var(--brand); border:1px solid rgba(47,93,84,.18);
+    border-radius:999px; font-size:12px; font-weight:600; padding:6px 12px;
+    box-shadow:0 3px 10px rgba(0,0,0,.16); transition:transform .12s, background .15s;
   }
-  .sugg:hover { background: #fff; }
+  .sugg:hover { background:#fff; transform:translateY(-1px); }
+  .sugg:active { transform:scale(.96); }
+  .sugg:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+
+  #direct-warn {
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    background:#f4f6f8; color:#556; font-size:15px; text-align:center; padding:24px;
+  }
 </style>
 </head>
 <body>
@@ -54,12 +80,12 @@
     <div id="bubble"></div>
     <canvas id="avatar-canvas"></canvas>
     <div id="suggestions"></div>
-    <div id="control-bar">
-      <button class="ctrl" id="btn-mic"   title="按一下開始說話">🎤 說話</button>
-      <button class="ctrl" id="btn-llm"   title="啟用瀏覽器內 AI 大腦（首次需下載模型）">🧠</button>
-      <button class="ctrl" id="btn-mute"  title="靜音 / 取消靜音">🔊</button>
-      <button class="ctrl" id="btn-speed" title="語速">1.0×</button>
-      <button class="ctrl" id="btn-close" title="收起">✕</button>
+    <div id="control-bar" role="toolbar" aria-label="虛擬人控制列">
+      <button class="ctrl primary" id="btn-mic"   aria-label="開始語音對話"><span aria-hidden="true">🎤</span> 說話</button>
+      <button class="ctrl" id="btn-llm"   aria-label="啟用瀏覽器內 AI 大腦（首次需下載模型）" aria-pressed="false"><span aria-hidden="true">🧠</span></button>
+      <button class="ctrl" id="btn-mute"  aria-label="靜音" aria-pressed="false"><span aria-hidden="true">🔊</span></button>
+      <button class="ctrl" id="btn-speed" aria-label="調整語速">1.0×</button>
+      <button class="ctrl" id="btn-close" aria-label="收起助理"><span aria-hidden="true">✕</span></button>
     </div>
   </div>
   <div id="direct-warn">請透過 <code>embed.js</code> 載入此元件。</div>
